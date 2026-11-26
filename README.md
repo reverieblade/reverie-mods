@@ -31,6 +31,10 @@ node reverie-salvage/test/run.js "<a clean EveJS 261115.1 folder>"
 
 Set `REVERIE_LOCAL_DIR` to a scratch folder when you run them, so they don't write into a real install's `_local/reverie`.
 
+## Reviews
+
+If you've played with the mods, good or bad, please leave a review in [Discussions](../../discussions). Reviews tell me what to fix and what to build next.
+
 ## License
 
 The mods are released under the GNU Affero General Public License version 3, the same license as EveJS, whose code they patch. `reverie-core/vendor/login_delivery.cjs` is an unmodified copy from the EveJS Launcher and stays under the launcher's GNU General Public License version 3.
