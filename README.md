@@ -4,7 +4,7 @@ These are the Reverie mods for the EveJS server emulator. You install them with 
 
 | Mod | Version | What it does |
 | --- | --- | --- |
-| [Reverie Core](reverie-core) | 0.2.3 | The framework every Reverie mod runs on. It gives every mod one shared patch layer applied in load order, combines the new item types and client data from all installed mods, catches mods that claim the same IDs or edit the same thing, and reloads code and settings without a restart. |
+| [Reverie Core](reverie-core) | 0.2.4 | The framework every Reverie mod runs on. It gives every mod one shared patch layer applied in load order, combines the new item types and client data from all installed mods, catches mods that claim the same IDs or edit the same thing, and reloads code and settings without a restart. |
 | [Reverie Client Data](reverie-client) | 0.1.0 | Writes the new items, names, icons and blueprints of your installed Reverie mods into your EVE client, and puts the client's own files back when you disable or remove it. |
 | [Reverie's Salvage and Reclamation](reverie-salvage) | 0.2.0 | Lets you cut wrecks apart with hull cutters into panels of alloys, which a salvager takes apart into your hold. It adds a full set of T1, meta and T2 cutters and salvagers, puts salvage gear in the NPC loot pools, stocks the T1 blueprints on the market, and has its own settings in the launcher's Configure form. See its [README](reverie-salvage/README.md). |
 

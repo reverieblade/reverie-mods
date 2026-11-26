@@ -14,6 +14,9 @@
 # (photo.GetIconByType) found no icon and drew nothing, while blueprints, which go through
 # another path, showed theirs. When the DUST table has nothing, this falls back to the type's
 # own icon ID. EveJS's own tools/ClientMods/ingame/evejs_shipsystems.py does the same.
+# GetIconFile, which most windows use, reads the icon ID directly and needs no fix; every other
+# caller in the client looks GetIcon up on typeHelpers when it runs, except the compare tool,
+# which copied it at import (see rebind_copies).
 import sys
 import logging
 
@@ -69,6 +72,32 @@ def patch_icons():
 
     GetIcon.evejs_original = original_get_icon
     typemod.GetIcon = GetIcon
+    rebind_copies(original_get_icon, GetIcon)
+
+
+# A module that ran "from inventorycommon.typeHelpers import GetIcon" before this script holds
+# its own copy of the old function, which replacing it on typeHelpers never reaches. The compare
+# tool (eve/client/script/ui/comparison/comparableAttribute) is one, so every module holding the
+# original, or a wrapper from an earlier login, is pointed at the new one.
+def rebind_copies(original, replacement):
+    rebound = []
+    for name, module in list(sys.modules.items()):
+        if module is None:
+            continue
+        try:
+            held = module.__dict__.get('GetIcon')
+        except Exception:
+            continue
+        if held is None or held is replacement:
+            continue
+        if held is original or getattr(held, 'evejs_original', None) is original:
+            try:
+                module.GetIcon = replacement
+                rebound.append(name)
+            except Exception:
+                pass
+    if rebound:
+        log('GetIcon re-pointed in %s' % ', '.join(sorted(rebound)))
 
 
 # ------------------------------------------------------------------ install
