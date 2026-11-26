@@ -8,7 +8,7 @@
   "supportedBackends": ["native"],
   "activation": {"strategy": "loader_rename"},
   "restart": "game_server",
-  "updates": {"provider": "github", "repository": "KevinBomer/reverie-mods", "asset": "reverie-core-{version}.zip", "channel": "stable", "tagPrefix": "reverie-core-v", "preserveFiles": []},
+  "updates": {"provider": "github", "repository": "reverieblade/reverie-mods", "asset": "reverie-core-{version}.zip", "channel": "stable", "tagPrefix": "reverie-core-v", "preserveFiles": []},
   "launcherApi": {
     "version": 1,
     "minLauncherVersion": "1.0.74",
