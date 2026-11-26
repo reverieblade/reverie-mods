@@ -1,0 +1,3 @@
+# Keep every file byte for byte. Reverie checks the vendored launcher file by its hash and
+# matches edit text against game files exactly, so line endings must never be converted.
+* -text
