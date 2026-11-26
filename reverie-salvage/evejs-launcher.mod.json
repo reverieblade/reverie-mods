@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "id": "reverie-salvage",
   "displayName": "Reverie's Salvage and Reclamation",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Wrecks can be cut apart with hull cutters into panels of alloys and containers of salvage, which a salvager then takes apart into the hold. Salvaging recovers metal scrap and alloys along with the usual parts, a Field Reclaimer turns a hull straight into minerals, and NPC scavengers carry alloys in their cargo.",
   "kind": "loader",
   "supportedBackends": ["native"],
@@ -10,7 +10,7 @@
   "loadAfter": ["reverie-core"],
   "activation": {"strategy": "loader_rename"},
   "restart": "game_server",
-  "updates": {"provider": "github", "repository": "KevinBomer/reverie-mods", "asset": "reverie-salvage-{version}.zip", "channel": "stable", "tagPrefix": "reverie-salvage-v", "preserveFiles": []},
+  "updates": {"provider": "github", "repository": "reverieblade/reverie-mods", "asset": "reverie-salvage-{version}.zip", "channel": "stable", "tagPrefix": "reverie-salvage-v", "preserveFiles": []},
   "settings": {
     "schemaVersion": 1,
     "files": [

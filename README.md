@@ -5,18 +5,22 @@ These are the Reverie mods for the EveJS server emulator. You install them with 
 | Mod | Version | What it does |
 | --- | --- | --- |
 | [Reverie Core](reverie-core) | 0.2.4 | The framework every Reverie mod runs on. It gives every mod one shared patch layer applied in load order, combines the new item types and client data from all installed mods, catches mods that claim the same IDs or edit the same thing, and reloads code and settings without a restart. |
-| [Reverie Client Data](reverie-client) | 0.1.0 | Writes the new items, names, icons and blueprints of your installed Reverie mods into your EVE client, and puts the client's own files back when you disable or remove it. |
-| [Reverie's Salvage and Reclamation](reverie-salvage) | 0.2.0 | Lets you cut wrecks apart with hull cutters into panels of alloys, which a salvager takes apart into your hold. It adds a full set of T1, meta and T2 cutters and salvagers, puts salvage gear in the NPC loot pools, stocks the T1 blueprints on the market, and has its own settings in the launcher's Configure form. See its [README](reverie-salvage/README.md). |
+| [Reverie Client Data](reverie-client) | 0.1.1 | Writes the new items, names, icons and blueprints of your installed Reverie mods into your EVE client, and puts the client's own files back when you disable or remove it. |
+| [Reverie's Salvage and Reclamation](reverie-salvage) | 0.2.1 | Lets you cut wrecks apart with hull cutters into panels of alloys, which a salvager takes apart into your hold. It adds a full set of T1, meta and T2 cutters and salvagers, puts salvage gear in the NPC loot pools, stocks the T1 blueprints on the market, and has its own settings in the launcher's Configure form. See its [README](reverie-salvage/README.md). |
 
 ## Installing
 
 You need EveJS 261115.1 and EveJS Launcher 1.0.74 or later.
 
-1. Download the ZIPs from the [releases page](../../releases). Each mod has its own release, tagged with the mod's name and version, for example `reverie-salvage-v0.2.0`.
+1. Download the ZIPs from the [releases page](../../releases). Each mod has its own release, tagged with the mod's name and version, for example `reverie-salvage-v0.2.1`.
 2. In the launcher, open **Mods**, choose **Add ZIP** and add them in this order: Reverie Core, then Reverie Client Data, then Reverie's Salvage and Reclamation.
 3. Enable all three and choose **Apply & Restart**.
 
 The launcher will not warn you if Reverie Client Data is missing, but the new modules stay switched off without it. Once the mods are installed, **Check mod updates** in the launcher finds newer releases here.
+
+### If you downloaded before 26 November 2026
+
+This repository moved from the GitHub account KevinBomer to reverieblade. The launcher only takes updates from the place a mod says it came from, so Reverie Core 0.2.3 or older, Reverie Client Data 0.1.0 and Reverie's Salvage and Reclamation 0.2.0 or older will never be offered an update. Add the current ZIP of each mod once with **Add ZIP**, the same way you installed it, and the launcher finds every later update by itself.
 
 ## For mod authors
 
