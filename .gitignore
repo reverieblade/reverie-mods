@@ -1,0 +1,6 @@
+_local/
+node_modules/
+preferences.json
+*.log
+*.reverie-tmp
+*.zip

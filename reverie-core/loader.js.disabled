@@ -1,0 +1,12 @@
+"use strict";
+
+// Reverie's core, as a Node preload. The EveJS Launcher passes it with --require when the mod is
+// enabled. Without the launcher, StartServer.bat passes it with REVERIE_STANDALONE=1, and the core
+// then loads the enabled mods in mods/ itself, in the order `node mods/reverie-core/cli.js` keeps.
+// REVERIE_DISABLE=1 turns everything off.
+
+const { getCore } = require("./lib/core");
+
+const core = getCore();
+// npm and the server's child processes inherit NODE_OPTIONS too; the core stays idle in them.
+if (core && core.role !== "other" && process.env.REVERIE_STANDALONE === "1") core.loadStandalone();

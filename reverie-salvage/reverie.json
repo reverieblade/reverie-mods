@@ -1,0 +1,60 @@
+{
+  "reverieVersion": 1,
+  "id": "reverie-salvage",
+  "processes": ["game"],
+  "claims": {
+    "types": [[992000, 992999]],
+    "groups": [990050],
+    "attributes": [[7900, 7904]],
+    "messages": [[9710000, 9710999]],
+    "icons": [1036, 1063, 1459, 1460, 1461, 1665]
+  },
+  "edits": {
+    "types": [5235, 5241, 5243, 25861, 30836, 22922, 28749, 28751, 75781, 80246, 80247, 90038,
+      11724, 11725, 11732, 11733, 11734, 11735, 11736, 11737, 11738, 11739, 11740, 11741]
+  },
+  "client": {
+    "layer": "defs/layer.js",
+    "scripts": ["client/scripts/salvage.py"]
+  },
+  "worksWith": [
+    { "mod": "reverie-holds", "service": "holds", "version": "1", "adds": "Salvagers that carry a salvage hold of their own, and a Field Reclaimer mineral hold. Until holds is out, salvage fills the Salvage Hold a hull already has." },
+    { "mod": "reverie-npc-loot", "service": "npc-loot", "version": "1", "adds": "Salvage's alloy and scrap rolls follow npc-loot's luck and NPC tiers. Without it, salvage adds them to the game's own loot table." },
+    { "mod": "reverie-bots", "service": "bot-jobs", "version": "1", "adds": "Bot pilots who buy cutters and salvagers, cut the wrecks in their system and sell the metal." },
+    { "mod": "reverie-field-modules", "service": "field-modules", "version": "1", "adds": "The Field Reprocessor refines salvage's alloys in space." }
+  ],
+  "files": [
+    { "path": "server/src/space/modules/salvagerRuntime.js", "format": "text",
+      "start": "function resolveAccessDifficultyBase(targetEntity, itemRecord = null, nativeWreckRecord = null) {",
+      "end": "function buildSalvageChanceSnapshot(targetEntity, accessBonusPercent = 0) {",
+      "valueFile": "edits/salvagerRuntime.chance.js", "originalSha256": "af0cf80bc63fa7ef10263624ab2e375f14e280cba8a66713574b6ea6e9841aab" },
+    { "path": "server/src/space/modules/salvagerRuntime.js", "format": "text",
+      "start": "  const randomCallbacks = options.callbacks || {};",
+      "end": "function computeUsedVolume(items = []) {",
+      "valueFile": "edits/salvagerRuntime.rewards.js", "originalSha256": "354b19750a07b0eff114bb803029001cd9c1c8fbe1bed7e9ee8e9244664a718f" },
+    { "path": "server/src/space/modules/salvagerRuntime.js", "format": "text",
+      "start": "  const skillMap = callbacks.getEntityRuntimeSkillMap",
+      "end": "  const completionResult = completeSuccessfulSalvage(scene, targetEntity, nowMs, callbacks);",
+      "valueFile": "edits/salvagerRuntime.cycle.js", "originalSha256": "19e9acb251188c523f46d0d1b94e632d7328db85877e8f8a4f0095c829798a70" },
+    { "path": "server/src/space/modules/salvagerRuntime.js", "format": "text",
+      "start": "  if (rewardEntries.length > 0) {\n    const grantResult = callSalvageMutationSafely(",
+      "end": "      \"SALVAGE_REWARD_GRANT_FAILED\",",
+      "valueFile": "edits/salvagerRuntime.grant.js", "originalSha256": "8f59a1b020bba43de0bd626fae10594a63766f8dacd3823d6362147892021d9d" },
+    { "path": "server/src/space/modules/salvagerRuntime.js", "format": "text",
+      "start": "  resolveSalvagerActivation,\n  executeSalvagerCycle,",
+      "end": "  _testing: {\n    calculateSalvageChancePercent,",
+      "valueFile": "edits/salvagerRuntime.exports.js", "originalSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b" },
+    { "path": "server/src/services/mining/miningRuntime.js", "format": "text",
+      "start": "  executeMiningCycle,\n  miningModuleCanShortCycle,",
+      "end": "  buildScanResultsForSession,\n};",
+      "valueFile": "edits/miningRuntime.exports.js", "originalSha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b" },
+    { "path": "server/src/services/mining/miningDogma.js", "format": "text",
+      "start": "    round6(toFiniteNumber(moduleAttributes[ATTRIBUTE_MINING_AMOUNT], 0)),\n  );",
+      "end": "  return {\n    family: resolveMiningFamily(effectiveModuleItem, effectRecord),",
+      "valueFile": "edits/miningDogma.noYield.js", "originalSha256": "b0b3ecec01c5d68e171dfac5f0740994cbfd7e4dd11b7efa491aaff52ea22f62" },
+    { "path": "server/src/space/npc/npcLoot.js", "format": "text",
+      "start": "  const kind = normalizeLowerText(selector.kind || selector.type || \"any\");",
+      "end": "  if (kind === \"ammo\" || kind === \"charge\") {",
+      "valueFile": "edits/npcLoot.selectorKind.js", "originalSha256": "5d9361569c535d62c2ef510878b2403e7a05be0fab363797638aee6aa47caff1" }
+  ]
+}

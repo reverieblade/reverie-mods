@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 3,
+  "id": "reverie-core",
+  "displayName": "Reverie Core",
+  "version": "0.2.3",
+  "description": "The shared foundation for Reverie mods: one patch layer that every mod uses in load order, named hook points, composed client type data, and checks that installed mods do not claim the same IDs.",
+  "kind": "loader",
+  "supportedBackends": ["native"],
+  "activation": {"strategy": "loader_rename"},
+  "restart": "game_server",
+  "updates": {"provider": "github", "repository": "KevinBomer/reverie-mods", "asset": "reverie-core-{version}.zip", "channel": "stable", "tagPrefix": "reverie-core-v", "preserveFiles": []},
+  "launcherApi": {
+    "version": 1,
+    "minLauncherVersion": "1.0.74",
+    "helper": {"runtime": "node", "path": "helper.js"},
+    "capabilities": ["install", "verify", "recover", "prepare_disable", "prepare_remove", "prepare_server_start"]
+  }
+}

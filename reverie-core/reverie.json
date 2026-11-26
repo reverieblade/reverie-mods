@@ -1,0 +1,19 @@
+{
+  "reverieVersion": 1,
+  "id": "reverie-core",
+  "processes": ["game", "worker"],
+  "files": [
+    { "path": "server/src/services/_shared/referenceData.js", "format": "text",
+      "start": "  if (tableName === TABLE.TYPE_DOGMA) {",
+      "end": "// The game store preloads the static tables from the same data dir.",
+      "valueFile": "edits/referenceData.staticTable.js", "originalSha256": "7139b5356e542d63f957251b45b8abb6651abefc814a6c638821da1a7994bee0" },
+    { "path": "server/src/services/industry/industryStaticData.js", "format": "text",
+      "start": "  const payload = readTable(INDUSTRY_BLUEPRINT_TABLE);",
+      "end": "  const byTypeID = new Map();",
+      "valueFile": "edits/industryStaticData.blueprints.js", "originalSha256": "7d9d0b1982c7d6ff926bd367cd4f1f1c3fd9b564ee75c2d76500e292f6b14062" },
+    { "path": "server/src/services/inventory/itemTypeRegistry.js", "format": "text",
+      "start": "function loadRegistry() {",
+      "end": "function dedupeEntries(entries) {",
+      "valueFile": "edits/itemTypeRegistry.generation.js", "originalSha256": "44840156c67787299b15c065cbb75ef90e9829d370473d8f57a653e296a75e11" }
+  ]
+}
