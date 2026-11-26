@@ -321,6 +321,10 @@ function build(ctx) {
     messages,
     icons: Object.values(ICONS).map((icon) => ({ ...icon })),
     marketStock,
+    // With Reverie's Holds and Bays: every salvager carries a Salvage Hold
+    // and the Field Reclaimer a Mineral Hold, larger from tech II up, as in
+    // the Scarlet build. Holds puts the bay on the module in its after pass.
+    contributes: { "reverie-holds": { moduleBays: moduleBays(family) } },
     clientData: {
       panels: clientPanels,
       cutters: family.variants().filter((variant) => variant.kind === "cutter").map((variant) => variant.typeID),
@@ -329,4 +333,20 @@ function build(ctx) {
   };
 }
 
-module.exports = { build, MESSAGE, ICONS };
+// The bays salvage's modules carry: { salvager: [base, from tech II], ... }.
+const MODULE_BAYS = Object.freeze({
+  salvager: { bay: "salvage", m3: [500, 750] },
+  reclaimer: { bay: "mineral", m3: [1000, 1500] },
+});
+
+function moduleBays(family) {
+  const out = [];
+  for (const variant of family.variants()) {
+    const spec = MODULE_BAYS[variant.family];
+    if (!spec) continue;
+    out.push({ typeID: variant.typeID, bay: spec.bay, m3: variant.metaLevel >= 5 ? spec.m3[1] : spec.m3[0] });
+  }
+  return out;
+}
+
+module.exports = { build, MESSAGE, ICONS, MODULE_BAYS, moduleBays };

@@ -18,7 +18,7 @@
     "scripts": ["client/scripts/salvage.py"]
   },
   "worksWith": [
-    { "mod": "reverie-holds", "service": "holds", "version": "1", "adds": "Salvagers that carry a salvage hold of their own, and a Field Reclaimer mineral hold. Until holds is out, salvage fills the Salvage Hold a hull already has." },
+    { "mod": "reverie-holds", "service": "holds", "version": "1", "adds": "Salvagers that carry a Salvage Hold of their own, and a Mineral Hold on the Field Reclaimer. Without it, salvage fills the Salvage Hold a hull already has." },
     { "mod": "reverie-npc-loot", "service": "npc-loot", "version": "1", "adds": "Salvage's alloy and scrap rolls follow npc-loot's luck and NPC tiers. Without it, salvage adds them to the game's own loot table." },
     { "mod": "reverie-bots", "service": "bot-jobs", "version": "1", "adds": "Bot pilots who buy cutters and salvagers, cut the wrecks in their system and sell the metal." },
     { "mod": "reverie-field-modules", "service": "field-modules", "version": "1", "adds": "The Field Reprocessor refines salvage's alloys in space." }

@@ -1,0 +1,1 @@
+require("../reverie-core/register")(__dirname);

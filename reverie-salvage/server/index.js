@@ -183,6 +183,9 @@ function patchHolds(api) {
     },
   });
   // Loot All into cargo in space sends what the Salvage Hold takes there.
+  // Reverie's Holds and Bays does this for every bay, the Salvage Hold
+  // included, so with it loaded (it loads first) salvage leaves Loot All alone.
+  if (api.mods.has("reverie-holds")) return;
   api.replace("services/inventory/invBrokerService", "prototype.Handle_Add", function handleAdd(original, ...args) {
     return lib("salvageHoldLootRouting").handleAdd.call(this, original, ...args);
   });

@@ -8,6 +8,14 @@ This is the first mod built for Reverie's Module Manager. It is written as a des
 
 The full numbers, balance passes and history stay in [doc/SALVAGE.md](../../doc/SALVAGE.md). This document is the mod's boundary: what it owns, what it leaves to other mods, and how it attaches to them.
 
+## Version 0.3
+
+Version 0.3 works with Reverie's Holds and Bays (`reverie-holds` 0.1) and needs Reverie Core 0.3.0.
+
+- With Holds installed, every salvager carries a Salvage Hold of its own: 500 m³ on T1 and meta models, 750 m³ from T2 up. Each Field Reclaimer carries a Mineral Hold, 1,000 m³ on the T1 and 1,500 m³ on the T2. The hold is added to any hold of that kind the ship already has, and it shows on the module's attributes tab. The salvage layer hands Holds the list (`contributes` in `defs/layer.js`), and Holds puts the bays on the modules.
+- With Holds installed, Holds handles Loot All in space for every bay, the Salvage Hold included. Salvage then leaves `Handle_Add` and `Handle_MultiAdd` alone, so the two mods never both replace them. Salvage loads after Holds (`loadAfter` in the manifest) so it can see that Holds is there.
+- Without Holds, salvage works as in 0.2.
+
 ## Version 0.1
 
 Version 0.1 carries salvage to a clean EveJS, server and client together. Its type layer adds the tool family, the blueprints, the Hull Cutter group and attributes, names, descriptions and icons, and the Reverie Client Data package (`mods/reverie-client`) writes that layer into the player's EVE client with no Python needed. The in-game script comes to the client at login.
@@ -23,7 +31,7 @@ Version 0.1 carries salvage to a clean EveJS, server and client together. Its ty
 - The salvaging extras: the chance bonus, the empty factor, and the scrap and extra part rolls by hull size (moved here from the main tree's `npcLootOverhaul.js` into `server/lib/salvageTables.js`).
 - Alloys from the hull on every salvage, scaled by the hull left on the wreck, and the alloy rolls on scavenger and hauler cargo.
 - Guns destroy NPC wrecks and panels.
-- The Salvage Hold rules: it takes Metal Scraps and Reinforced Metal Scraps, salvage fills it before cargo, and Loot All in space sends what it takes there. These rules do nothing yet with this mod alone. The only type in CCP's data with a Salvage Hold (`specialSalvageHoldCapacity`) is the unpublished Cockroach, so no ship a player can fly has one until the holds mod gives the hold to the salvagers and to hulls (checked 2026-11-25). In the main tree the holds come from the Salvage Hold Extensions and the salvagers' own bays.
+- The Salvage Hold rules: it takes Metal Scraps and Reinforced Metal Scraps, salvage fills it before cargo, and Loot All in space sends what it takes there. These rules do nothing yet with this mod alone. The only type in CCP's data with a Salvage Hold (`specialSalvageHoldCapacity`) is the unpublished Cockroach, so no ship a player can fly has one until the holds mod gives the hold to the salvagers and to hulls (checked 2026-11-25). In the main tree the holds come from the Salvage Hold Extensions and the salvagers' own bays. Since version 0.3 they come from Reverie's Holds and Bays (see [Version 0.3](#version-03)).
 - The `salvage` service for other mods and bots (under [Provides](#provides)).
 - Salvage gear in NPC loot (version 0.2). Cutters and salvagers join the module pools of EveJS's own loot tables and drop like any other module, from plain T1 and meta models off ordinary NPCs up to the Angel officer pieces (see [Loot tables](#loot-tables)).
 - A Configure form in the EveJS Launcher (version 0.2) for twelve settings, which apply without a restart (see [Settings](#settings)).
@@ -32,7 +40,7 @@ Version 0.1 carries salvage to a clean EveJS, server and client together. Its ty
 **What waits for later versions:**
 
 - bot salvagers, which need the bot-jobs service;
-- the salvagers' own holds and the Field Reclaimer's mineral hold, which belong to the holds mod.
+- the salvagers' own holds and the Field Reclaimer's mineral hold, which belong to the holds mod (done in version 0.3 with Reverie's Holds and Bays).
 
 **The client and the server stay in step.** The server turns the layer on only while the client was patched with exactly that layer: the core compares the layer's sha-256 with the one in the client patch ledger. Until then the server has none of the new types, the three cutters are CCP's unpublished lasers under CCP's names (they still cut, because they keep their mining amount), and panels are the plain small, medium and large wrecks. A server whose players patch their own clients from the same mods can turn the layer on with `REVERIE_TYPE_LAYER=server`.
 
@@ -253,7 +261,7 @@ Live tunables:
 |---|---|
 | Refining alloys in space (the Field Reprocessor) | field-modules, which uses this mod's alloys |
 | What stations bid for alloys (`EVEJS_STATION_ALLOY_BID_SHARE`) and station refining | station-economy |
-| The Salvage Hold and its routing, the Salvage Hold Extensions, the bays that come with modules | holds and bay-extensions |
+| The Salvage Hold and its routing, the Salvage Hold Extensions, the bays that come with modules | Reverie's Holds and Bays (`reverie-holds`) |
 | The loot engine itself: luck, NPC tiers, hull fit filters, the order of rolls | npc-loot |
 | Running bots: the director, operations, travel, market and fitting | the bot mod that provides bot-jobs |
 | Agents in space selling salvage gear | space-agents |
@@ -270,14 +278,13 @@ That is the only requirement. With nothing else installed, salvage still works: 
 
 ### Works with
 
-Each partner adds features when it is installed and enabled, and the features go away cleanly when it is disabled, live. The mod attaches through `api.when(service, version, fn)`, so load order does not matter.
+Each partner adds features when it is installed and enabled, and the features go away cleanly when it is disabled, live. The mod attaches through `api.when(service, version, fn)`, so load order does not matter, with one exception: salvage loads after Holds so it can tell, while declaring its patches, that Holds handles Loot All.
 
 | Mod | Service | What it adds |
 |---|---|---|
-| holds | `holds` 1 | What a salvager takes and what is looted in space goes to the Salvage Hold first. Each salvager carries a salvage hold of its own, and each Field Reclaimer a mineral hold that its minerals fill first. Without holds, everything goes to the cargo hold. |
+| Reverie's Holds and Bays (`reverie-holds`) | `holds` 1 | What a salvager takes and what is looted in space goes to the Salvage Hold first. Each salvager carries a salvage hold of its own, and each Field Reclaimer a mineral hold that its minerals fill first. Its Salvage Hold Extensions grow the hold the salvagers fill. Without holds, everything goes to the cargo hold. |
 | npc-loot | `npc-loot` 1 | The salvage gear, alloy, scrap and salvaging rolls become rolls in npc-loot's table, so they follow its luck and NPC tiers and come after its own rolls in a fixed order. Without npc-loot, salvage adds its rolls to the game's own loot table. |
 | bot economy | `bot-jobs` 1 | Bot salvagers. Without a bot mod, no bot salvages. |
-| bay-extensions | `bays` 1 | Salvage Hold Extensions grow the hold the salvagers fill. Its loot roll for them is its own. |
 | field-modules | `field-modules` 1 | The Field Reprocessor refines this mod's alloys in space. Salvage provides the alloy classes it reads. |
 | space-agents | `space-agents` 1 | Space agents stock salvage gear by variant (`variantOf`). |
 
@@ -382,7 +389,7 @@ api.when("bot-jobs", 1, (jobs) => jobs.register({
 1. Done 2026-11-25: the core composes type layers (`client/compose.js`), writes them into the client (`client/patch.js`), applies them on the server (`lib/typeLayer.js`) and sends client scripts at login (`lib/loginScripts.js`). The mod carries its own copy of the ladder (`salvageModuleFamily.js`); the other mods that use the ladder in the main tree will want it as shared machinery in the core.
 2. The bot mod has to provide `bot-jobs`, and the four places that call the salvage run by name have to ask the registry instead.
 3. npc-loot has to provide `npc-loot` with a way to add rolls, and the salvage rolls move out of `npcLootOverhaul.js`.
-4. The holds mod has to provide `holds`, which `salvageHoldRouting.js` and the salvager holds use.
+4. Done 2026-11-26: Reverie's Holds and Bays provides `holds` and puts the salvager holds on the modules from salvage's contribution.
 5. The files move into `server/`, `defs/` and `client/` here, and `mods/reverie-salvage/evejs-launcher.mod.json` and `reverie.json` are written. All of it, `defs/` and `client/` included, was done for v0.1 on 2026-11-25.
 
 **In the game:**

@@ -46,6 +46,14 @@ function mod(id, { extra, reverie, index, disabled } = {}) {
 
 // The core, copied without its tests.
 fs.cpSync(CORE, path.join(root, "mods", "reverie-core"), { recursive: true, filter: (src) => !src.startsWith(path.join(CORE, "test")) });
+// The core ships its loader as loader.js.disabled (the launcher enables it by renaming), so a
+// copy taken from a release or the repository is switched on here the same way.
+{
+  const copied = path.join(root, "mods", "reverie-core");
+  if (!fs.existsSync(path.join(copied, "loader.js")) && fs.existsSync(path.join(copied, "loader.js.disabled"))) {
+    fs.renameSync(path.join(copied, "loader.js.disabled"), path.join(copied, "loader.js"));
+  }
+}
 
 // A fake server: index.js boots, then reports what it sees in each process.
 write("server/package.json", JSON.stringify({ name: "fake", type: "commonjs", main: "index.js" }));
@@ -559,6 +567,100 @@ if (Sqlite) {
   });
 } else {
   console.log("--    market stock tests skipped: better-sqlite3 is not in the repo's server folder");
+}
+
+// The type layer's after pass (core 0.3.0): contributions from other mods, ctx.require, and the
+// edit rights that edits.categories, edits.groups and contributors give. A tree of its own, so the
+// mods above never reach the composer.
+{
+  const composeRoot = path.join(root, "compose");
+  const put = (file, value) => {
+    fs.mkdirSync(path.dirname(path.join(composeRoot, file)), { recursive: true });
+    fs.writeFileSync(path.join(composeRoot, file), typeof value === "string" ? value : JSON.stringify(value, null, 2));
+  };
+  fs.cpSync(CORE, path.join(composeRoot, "mods", "reverie-core"), { recursive: true, filter: (src) => !src.startsWith(path.join(CORE, "test")) });
+  put("_local/gameStore/data/itemTypes/data.json", { types: [
+    { typeID: 100, groupID: 10, categoryID: 6, basePrice: 100, typeName: "Hull" },
+    { typeID: 200, groupID: 20, categoryID: 6, basePrice: 200, typeName: "Other hull" },
+    { typeID: 300, groupID: 30, categoryID: 7, basePrice: 300, typeName: "Module" },
+    { typeID: 400, groupID: 40, categoryID: 8, basePrice: 400, typeName: "Charge" },
+  ] });
+  put("_local/gameStore/data/typeDogma/data.json", { typesByTypeID: {}, attributeTypesByID: {}, effectTypesByID: {} });
+  const layerMod = (id, reverie, layer, more = {}) => {
+    put(`mods/${id}/evejs-launcher.mod.json`, manifest(id, more));
+    put(`mods/${id}/loader.js`, 'require("../reverie-core/register")(__dirname);\n');
+    put(`mods/${id}/reverie.json`, { reverieVersion: 1, id, client: { layer: "layer.js" }, ...reverie });
+    put(`mods/${id}/layer.js`, layer);
+  };
+  const row = (typeID, groupID, categoryID) => ({ typeID, groupID, categoryID, basePrice: 50, typeName: `T${typeID}` });
+  // "base" loads first and reads what the later mods hand it in its after pass.
+  layerMod("base", { claims: { types: [9001] }, edits: { categories: [6], groups: [40] } }, `"use strict";
+exports.build = () => ({ types: [{ typeID: 9001, cloneFrom: 100, row: ${JSON.stringify(row(9001, 10, 6))} }], clientData: { built: true } });
+exports.after = (ctx) => {
+  const given = ctx.contributions();
+  let outside = null;
+  try { ctx.require("partner", "../base/layer.js"); } catch (error) { outside = error.message; }
+  return {
+    clientData: { given: given.map((c) => ({ mod: c.mod, version: c.version, data: c.data })),
+      helper: ctx.require("partner", "helper.js").name, missing: ctx.require("nobody", "x.js"), outside },
+    typeEdits: [
+      { typeID: 9101, row: { typeName: "Edited partner type" } },
+      { typeID: 300, row: { typeName: "Listed by partner" } },
+      { typeID: 200, row: { typeName: "In category 6" } },
+      { typeID: 400, row: { typeName: "In group 40" } },
+      { typeID: 9201, row: { typeName: "Not mine to edit" } },
+    ],
+  };
+};
+`);
+  // "partner" hands base data from its build, which wins over reverie.json's, and lists type 300.
+  layerMod("partner", { claims: { types: [9101] }, edits: { types: [300] }, contributes: { base: { from: "reverie.json" } } }, `"use strict";
+exports.build = () => ({ types: [{ typeID: 9101, cloneFrom: 100, row: ${JSON.stringify(row(9101, 10, 6))} }], contributes: { base: { from: "layer" } } });
+`, { version: "2.1.0" });
+  put("mods/partner/helper.js", 'module.exports = { name: "partner helper" };\n');
+  // "quiet" contributes a file; "stray" points outside itself; "loner" adds a type in category 7
+  // without contributing, so base may not touch it.
+  layerMod("quiet", { contributes: { base: "data/forBase.json" } }, "exports.build = () => ({});\n");
+  put("mods/quiet/data/forBase.json", { bays: [1, 2] });
+  layerMod("stray", { contributes: { base: "../partner/helper.js" } }, "exports.build = () => ({});\n");
+  layerMod("zloner", { claims: { types: [9201] } }, `exports.build = () => ({ types: [{ typeID: 9201, cloneFrom: 300, row: ${JSON.stringify(row(9201, 30, 7))} }] });\n`);
+
+  const saved = {};
+  for (const key of ["REVERIE_REPO_ROOT", "REVERIE_SERVER_ROOT", "REVERIE_LOCAL_DIR"]) { saved[key] = process.env[key]; delete process.env[key]; }
+  let composed = null;
+  try { composed = require(path.join(composeRoot, "mods", "reverie-core", "client", "compose")).compose(); } finally {
+    for (const [key, value] of Object.entries(saved)) if (value !== undefined) process.env[key] = value;
+  }
+  const { layer, errors } = composed;
+  const data = layer.clientData.base || {};
+  const edited = new Map(layer.typeEdits.map((edit) => [edit.typeID, edit.row.typeName]));
+
+  test("compose: the after pass merges its clientData over the build's", () => assert.strictEqual(data.built, true));
+  test("compose: contributions arrive in load order, a layer's own over reverie.json's, a file read from the mod", () => {
+    assert.deepStrictEqual(data.given, [
+      { mod: "partner", version: "2.1.0", data: { from: "layer" } },
+      { mod: "quiet", version: "1.0.0", data: { bays: [1, 2] } },
+    ]);
+  });
+  test("compose: a contribution file outside its mod is refused", () => {
+    assert.ok(errors.some((error) => /^stray: its contribution to base .*outside the mod/.test(error)), errors.join("\n"));
+  });
+  test("compose: ctx.require reads another mod's file, null for a missing mod, and never leaves that mod", () => {
+    assert.strictEqual(data.helper, "partner helper");
+    assert.strictEqual(data.missing, null);
+    assert.match(String(data.outside), /reaches outside that mod/);
+  });
+  test("compose: edit rights from a contributor's types, its edits.types, edits.categories and edits.groups", () => {
+    assert.strictEqual(edited.get(9101), "Edited partner type");
+    assert.strictEqual(edited.get(300), "Listed by partner");
+    assert.strictEqual(edited.get(200), "In category 6");
+    assert.strictEqual(edited.get(400), "In group 40");
+  });
+  test("compose: a type outside every right stays unedited", () => {
+    assert.ok(!edited.has(9201));
+    assert.ok(errors.some((error) => error === "base: edits type 9201, which it does not list in reverie.json edits.types"), errors.join("\n"));
+    assert.strictEqual(errors.length, 2, errors.join("\n"));
+  });
 }
 
 Promise.all(pending).then(() => {

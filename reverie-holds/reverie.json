@@ -1,0 +1,33 @@
+{
+  "reverieVersion": 1,
+  "id": "reverie-holds",
+  "processes": ["game"],
+  "claims": {
+    "types": [[993000, 993999]],
+    "groups": [990051],
+    "attributes": [[7910, 7912]],
+    "effects": [[13900, 13907]],
+    "marketGroups": [[990100, 990117]],
+    "messages": [[9711000, 9711999]],
+    "icons": [1642, 1643, 1644, 1647, 1648, 1650, 1651]
+  },
+  "edits": {
+    "categories": [6]
+  },
+  "client": {
+    "layer": "defs/layer.js",
+    "scripts": ["client/scripts/holds.py"]
+  },
+  "worksWith": [
+    { "mod": "reverie-salvage", "service": "salvage", "version": "1", "adds": "Salvagers carry a Salvage Hold of their own and the Field Reclaimer a Mineral Hold, and Loot All sends salvage to the Salvage Hold. Salvage 0.3.0 or later contributes these." },
+    { "mod": "reverie-field-modules", "service": "field-modules", "version": "1", "adds": "The Ice Centrifuge carries a Fuel Bay and the Field Reprocessor a Mineral Hold, and both place their output through the holds service." },
+    { "mod": "reverie-data", "service": "data", "version": "1", "adds": "Data Storage, a bay of its own on every ship, with its drives, chips and extensions." },
+    { "mod": "reverie-ship-fuel", "service": "ship-fuel", "version": "1", "adds": "A Fuel Bay on every ship, sized by hull." }
+  ],
+  "files": [
+    { "path": "server/src/services/agent/agentMissionRuntime.js", "format": "text",
+      "start": "function listCharacterCargoStacks(characterID, locationID, flagID, typeID) {",
+      "end": "function sumItemStackQuantity(items = []) {",
+      "valueFile": "edits/agentMissionRuntime.cargoStacks.js", "originalSha256": "074257f7035a05f1c49dbf2b615cf1c2fdf44af8bc42a266cbc48c232be6aced" }
+  ]
+}

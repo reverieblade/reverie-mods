@@ -19,7 +19,7 @@ const { startLoginScripts } = require("./loginScripts");
 const { createMarketStock } = require("./marketStock");
 
 const CORE_KEY = Symbol.for("reverie.core");
-const VERSION = "0.2.4";
+const VERSION = "0.3.0";
 const CORE_ID = "reverie-core";
 
 function createLog() {

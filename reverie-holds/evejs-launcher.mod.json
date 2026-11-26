@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 3,
+  "id": "reverie-holds",
+  "displayName": "Reverie's Holds and Bays",
+  "version": "0.1.1",
+  "description": "Bay extension modules grow a ship's special holds or give it one it lacks: the Mining Hold, Fuel Bay, Expedition Hold, Salvage Hold, Ammo Hold, Mineral Hold and Planetary Commodities Hold, in three sizes from T1 to T2. Every bay a module adds works like one the hull was built with, items go to and come from the right bay, and a bay that still holds cargo cannot be taken off the ship. Other Reverie mods use it to give their own modules and ships a bay.",
+  "kind": "loader",
+  "supportedBackends": ["native"],
+  "requires": ["reverie-core"],
+  "loadAfter": ["reverie-core"],
+  "activation": {"strategy": "loader_rename"},
+  "restart": "game_server",
+  "updates": {"provider": "github", "repository": "reverieblade/reverie-mods", "asset": "reverie-holds-{version}.zip", "channel": "stable", "tagPrefix": "reverie-holds-v", "preserveFiles": []},
+  "settings": {
+    "schemaVersion": 1,
+    "files": [
+      {"id": "prefs", "base": "mod", "path": "preferences.json", "format": "json"}
+    ],
+    "fields": [
+      {"id": "lootToBay", "group": "Placing items", "label": "Loot All sends items to their bay",
+       "description": "When you loot a wreck or can into your cargo hold in space, items that a bay of your ship takes go to that bay instead, as long as it has room.",
+       "type": "boolean", "default": true, "restart": "none", "file": "prefs", "key": ["lootToBay"]},
+      {"id": "laserOverflow", "group": "Placing items", "label": "Mining lasers spill into cargo",
+       "description": "When every mining hold that takes the ore is full, a mining laser puts what it mines into the cargo hold. Off is the base game's rule: the laser stops.",
+       "type": "boolean", "default": false, "restart": "none", "file": "prefs", "key": ["laserOverflow"]},
+      {"id": "moduleOutputCan", "group": "Placing items", "label": "Module output that does not fit goes into a can",
+       "description": "When a module of another Reverie mod makes something that fits in none of your bays, it is left in a can in space beside you. Off, the module stops instead.",
+       "type": "boolean", "default": true, "restart": "none", "file": "prefs", "key": ["moduleOutputCan"]},
+      {"id": "extensionLoot", "group": "Loot and market", "label": "Bay extensions in NPC loot (multiplier)",
+       "description": "Scales how often NPC miners, haulers, salvagers and warships drop a bay extension. 0 turns it off.",
+       "type": "number", "default": 1, "minimum": 0, "maximum": 5, "step": 0.1, "restart": "none", "file": "prefs", "key": ["extensionLoot"]},
+      {"id": "blueprintsOnMarket", "group": "Loot and market", "label": "T1 extension blueprints on the market",
+       "description": "The T1 blueprints are sold wherever the market sells the Expanded Cargohold I Blueprint. T2 blueprints are always invented.",
+       "type": "boolean", "default": true, "restart": "client", "file": "prefs", "key": ["blueprintsOnMarket"]},
+      {"id": "partnerModuleBays", "group": "Other mods", "label": "Bays on other mods' modules",
+       "description": "Modules from other Reverie mods carry the bays they ask for, such as the Salvage Hold on a salvager.",
+       "type": "boolean", "default": true, "restart": "client", "file": "prefs", "key": ["partnerModuleBays"]},
+      {"id": "meters", "group": "Bay meters", "label": "Show bay meters",
+       "description": "Small meters above the ship display show how full each of your ship's bays is.",
+       "type": "boolean", "default": true, "restart": "client", "file": "prefs", "key": ["meters"]},
+      {"id": "metersPerRow", "group": "Bay meters", "label": "Meters per row",
+       "type": "integer", "default": 6, "minimum": 1, "maximum": 12, "step": 1, "advanced": true, "restart": "client", "file": "prefs", "key": ["metersPerRow"]},
+      {"id": "metersMost", "group": "Bay meters", "label": "Most meters shown",
+       "type": "integer", "default": 12, "minimum": 1, "maximum": 24, "step": 1, "advanced": true, "restart": "client", "file": "prefs", "key": ["metersMost"]}
+    ]
+  },
+  "launcherApi": {
+    "version": 1,
+    "minLauncherVersion": "1.0.74",
+    "helper": {"runtime": "node", "path": "helper.js"},
+    "capabilities": ["install", "verify", "recover", "prepare_disable", "prepare_remove", "prepare_server_start"]
+  }
+}

@@ -28,9 +28,24 @@
 //   ctx.itemType(typeID), ctx.itemTypes(), ctx.typeDogma(typeID), ctx.attributeType(id),
 //   ctx.effectType(id), ctx.materials(typeID), ctx.blueprint(blueprintTypeID), ctx.mod, ctx.layers
 //
+//   contributes   { "<mod id>": data }   what this mod hands another mod's after pass (core 0.3.0).
+//                 reverie.json may carry the same "contributes" block; data is inline, or a string
+//                 naming a JSON file in the mod. The layer's own wins over reverie.json's.
+//
+//   ctx.contributions()   [{ mod, version, dir, data }] from every loaded mod that contributes to
+//                         this one, in load order. Complete only in the after pass. Since core 0.3.0.
+//   ctx.require(modId, file)  a file of another loaded mod (its own folder only), or null when that
+//                         mod is not installed. Since core 0.3.0.
+//
+// A layer may also export after(ctx), called once every mod's build has run (in load order), with
+// the same ctx and returning the same shape. It is where a framework mod answers what other mods
+// contributed to it: their types exist by then, whatever the load order. Since core 0.3.0.
+//
 // Checks: every new ID lies in the mod's claims and is not CCP's already; a type edit targets a type
-// the mod lists in reverie.json "edits.types" or one that a mod it requires added; two mods editing
-// one field of one type are reported and the later one in load order wins.
+// the mod lists in reverie.json "edits.types", a type in a category or group it lists in
+// "edits.categories" or "edits.groups" (core 0.3.0), one that a mod it requires added, or one that a
+// mod contributing to it adds or lists in its own edits.types; two mods editing one field of one
+// type are reported and the later one in load order wins.
 
 const fs = require("fs");
 const path = require("path");
@@ -116,16 +131,64 @@ function compose({ modsDir, only } = {}) {
   const typeEdits = new Map(); // typeID -> { typeID, client, row, dogma, skills, by: { field: mod } }
   const blueprintEdits = new Map();
 
-  for (const mod of chosen) {
+  // What other loaded mods hand this one: reverie.json "contributes", and the "contributes" a
+  // layer's build returns (read in the after pass, once every build has run).
+  const layerContributions = new Map(); // mod id -> { "<target mod id>": data }
+  const contributionOf = (other, modId) => {
+    const fromLayer = layerContributions.get(other.id);
+    if (fromLayer && fromLayer[modId] !== undefined && fromLayer[modId] !== null) return fromLayer[modId];
+    const given = other.reverie && other.reverie.contributes && other.reverie.contributes[modId];
+    return given === undefined ? null : given;
+  };
+  const contributionsTo = (modId) => {
+    const list = [];
+    for (const other of all) {
+      const given = contributionOf(other, modId);
+      if (given === undefined || given === null || other.id === modId) continue;
+      let data = given;
+      if (typeof given === "string") {
+        const absolute = path.resolve(other.dir, given);
+        try {
+          if (!absolute.startsWith(path.resolve(other.dir) + path.sep)) throw new Error("it lies outside the mod");
+          data = JSON.parse(fs.readFileSync(absolute, "utf8").replace(/^﻿/, ""));
+        } catch (error) {
+          errors.push(`${other.id}: its contribution to ${modId} (${given}) could not be read: ${error.message}`);
+          continue;
+        }
+      }
+      list.push({ mod: other.id, version: other.version, dir: other.dir, data });
+    }
+    return list;
+  };
+  const requireFrom = (mod, modId, file) => {
+    const other = all.find((candidate) => candidate.id.toLowerCase() === String(modId).toLowerCase());
+    if (!other) return null;
+    const absolute = path.resolve(other.dir, String(file || ""));
+    if (!absolute.startsWith(path.resolve(other.dir) + path.sep)) throw new Error(`${mod.id}: ctx.require(${modId}, ${file}) reaches outside that mod`);
+    return require(absolute);
+  };
+  const ctxFor = (mod) => ({
+    ...tables, mod: { id: mod.id, version: mod.version, dir: mod.dir }, layers: out,
+    contributions: () => contributionsTo(mod.id),
+    require: (modId, file) => requireFrom(mod, modId, file),
+  });
+  const built = [];
+
+  const runLayer = (mod, phase) => {
     const file = path.join(mod.dir, mod.reverie.client.layer);
     let layer;
     try {
       const exported = require(file);
-      if (typeof exported.build !== "function") throw new Error(`${mod.reverie.client.layer} does not export build(ctx)`);
-      layer = exported.build({ ...tables, mod: { id: mod.id, version: mod.version, dir: mod.dir }, layers: out }) || {};
+      if (phase === "after") {
+        if (typeof exported.after !== "function") return;
+        layer = exported.after(ctxFor(mod)) || {};
+      } else {
+        if (typeof exported.build !== "function") throw new Error(`${mod.reverie.client.layer} does not export build(ctx)`);
+        layer = exported.build(ctxFor(mod)) || {};
+      }
     } catch (error) {
-      errors.push(`${mod.id}: its type layer failed: ${error && error.stack || error}`);
-      continue;
+      errors.push(`${mod.id}: its type layer${phase === "after" ? "'s after pass" : ""} failed: ${error && error.stack || error}`);
+      return;
     }
     const requires = new Set(mod.requires.map((id) => id.toLowerCase()));
     const claim = (kind, id, label, existsInCcp) => {
@@ -169,11 +232,30 @@ function compose({ modsDir, only } = {}) {
         if (!blueprint.definition || !blueprint.client || !blueprint.client.activities) { errors.push(`${mod.id}: blueprint ${id} needs a server definition and client activities`); continue; }
         out.blueprints.push({ ...blueprint, mod: mod.id });
       }
-      const editable = new Set(((mod.reverie.edits && mod.reverie.edits.types) || []).map(Number));
+      const edits = mod.reverie.edits || {};
+      const editable = new Set((edits.types || []).map(Number));
+      const editableCategories = new Set((edits.categories || []).map(Number));
+      const editableGroups = new Set((edits.groups || []).map(Number));
+      // Mods that contribute to this one let it edit the types they add or list.
+      const contributors = new Map();
+      for (const other of all) {
+        if (other.id === mod.id || contributionOf(other, mod.id) === null) continue;
+        contributors.set(other.id.toLowerCase(), new Set(((other.reverie.edits && other.reverie.edits.types) || []).map(Number)));
+      }
+      const rowOf = (typeID) => {
+        const own = out.types.find((type) => Number(type.typeID) === typeID);
+        return (own && own.row) || tables.itemType(typeID);
+      };
       const mayEdit = (typeID) => {
         if (editable.has(typeID)) return true;
         const added = owner.types.get(typeID);
-        return Boolean(added && (added === mod.id || requires.has(added.toLowerCase())));
+        if (added && (added === mod.id || requires.has(added.toLowerCase()) || contributors.has(added.toLowerCase()))) return true;
+        for (const listed of contributors.values()) if (listed.has(typeID)) return true;
+        if (editableCategories.size || editableGroups.size) {
+          const row = rowOf(typeID);
+          if (row && (editableCategories.has(Number(row.categoryID)) || editableGroups.has(Number(row.groupID)))) return true;
+        }
+        return false;
       };
       for (const edit of asList(layer.typeEdits, "typeEdits", mod)) {
         const id = Number(edit.typeID);
@@ -258,16 +340,29 @@ function compose({ modsDir, only } = {}) {
       }
     } catch (error) {
       errors.push(error.message);
-      continue;
+      return;
     }
-    if (layer.clientData !== undefined) out.clientData[mod.id] = layer.clientData;
+    if (layer.clientData !== undefined) {
+      const before = out.clientData[mod.id];
+      const bothObjects = phase === "after" && before && typeof before === "object" && !Array.isArray(before) &&
+        layer.clientData && typeof layer.clientData === "object" && !Array.isArray(layer.clientData);
+      out.clientData[mod.id] = bothObjects ? { ...before, ...layer.clientData } : layer.clientData;
+    }
+    if (phase === "after") return;
+    if (layer.contributes && typeof layer.contributes === "object" && !Array.isArray(layer.contributes)) {
+      layerContributions.set(mod.id, layer.contributes);
+    }
     for (const script of (mod.reverie.client && mod.reverie.client.scripts) || []) {
       const absolute = path.resolve(mod.dir, script);
       if (!fs.existsSync(absolute)) { errors.push(`${mod.id}: client script ${script} is missing`); continue; }
       out.scripts.push({ mod: mod.id, file: script, sha256: sha256(fs.readFileSync(absolute)) });
     }
     out.mods.push({ id: mod.id, version: mod.version });
-  }
+    built.push(mod);
+  };
+
+  for (const mod of chosen) runLayer(mod, "build");
+  for (const mod of built) runLayer(mod, "after");
 
   // Every attribute and effect the composed dogma uses must exist somewhere.
   const attributeKnown = (id) => Boolean(tables.attributeType(id)) || out.attributes.some((a) => Number(a.attributeID) === Number(id));
