@@ -2,7 +2,7 @@
   "schemaVersion": 3,
   "id": "reverie-holds",
   "displayName": "Reverie's Holds and Bays",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Bay extension modules grow a ship's special holds or give it one it lacks: the Mining Hold, Fuel Bay, Expedition Hold, Salvage Hold, Ammo Hold, Mineral Hold and Planetary Commodities Hold, in three sizes from T1 to T2. Every bay a module adds works like one the hull was built with, items go to and come from the right bay, and a bay that still holds cargo cannot be taken off the ship. Other Reverie mods use it to give their own modules and ships a bay.",
   "kind": "loader",
   "supportedBackends": ["native"],

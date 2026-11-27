@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 3,
+  "id": "reverie-specimen",
+  "displayName": "Specimen Bay (Holds test fixture)",
+  "version": "0.0.1",
+  "description": "A test mod that adds a bay of its own through Reverie's Holds and Bays. It exists only for test/framework.js.",
+  "kind": "loader",
+  "supportedBackends": ["native"],
+  "requires": ["reverie-core", "reverie-holds"],
+  "loadAfter": ["reverie-core", "reverie-holds"],
+  "activation": {"strategy": "loader_rename"},
+  "restart": "game_server"
+}

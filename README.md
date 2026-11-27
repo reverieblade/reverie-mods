@@ -6,7 +6,7 @@ These are the Reverie mods for the EveJS server emulator. You install them with 
 | --- | --- | --- |
 | [Reverie Core](reverie-core) | 0.3.0 | The framework every Reverie mod runs on. It gives every mod one shared patch layer applied in load order, combines the new item types and client data from all installed mods, catches mods that claim the same IDs or edit the same thing, and reloads code and settings without a restart. |
 | [Reverie Client Data](reverie-client) | 0.1.1 | Writes the new items, names, icons and blueprints of your installed Reverie mods into your EVE client, and puts the client's own files back when you disable or remove it. |
-| [Reverie's Holds and Bays](reverie-holds) | 0.1.1 | Adds new modules which let you add and expand special cargo holds on any ship, and create fits that wouldn't be practical in normal EVE. It has 126 bay extensions for seven of EVE's own bays in T1, meta and T2, with blueprints on the market, and a bay a module gives works like one the hull came with. See its [README](reverie-holds/README.md). |
+| [Reverie's Holds and Bays](reverie-holds) | 0.2.0 | Adds new modules which let you add and expand special cargo holds on any ship, and create fits that wouldn't be practical in normal EVE. It has 126 bay extensions for seven of EVE's own bays in T1, meta and T2, with blueprints on the market, and a bay a module gives works like one the hull came with. Other mods can build on it to give their modules and ships bays, add bays of their own, and take materials from any bay. See its [README](reverie-holds/README.md) and, for modders, its [GUIDE](reverie-holds/GUIDE.md). |
 | [Reverie's Salvage and Reclamation](reverie-salvage) | 0.3.0 | Lets you cut wrecks apart with hull cutters into panels of alloys, which a salvager takes apart into your hold. It adds a full set of T1, meta and T2 cutters and salvagers, puts salvage gear in the NPC loot pools, stocks the T1 blueprints on the market, and has its own settings in the launcher's Configure form. With Holds and Bays installed, every salvager carries a Salvage Hold of its own. See its [README](reverie-salvage/README.md). |
 
 ## Installing
@@ -35,7 +35,7 @@ node reverie-salvage/test/run.js "<a clean EveJS 261115.1 folder>"
 node reverie-holds/test/run.js "<a clean EveJS 261115.1 folder>"
 ```
 
-The Holds test also runs a partner test with Salvage when both folders sit side by side.
+The Holds test also runs a partner test with Salvage when both folders sit side by side, and a framework test with the test mod in `reverie-holds/test/fixtures/reverie-specimen`, which adds a bay of its own the way a modder would.
 
 Set `REVERIE_LOCAL_DIR` to a scratch folder when you run them, so they don't write into a real install's `_local/reverie`.
 

@@ -51,7 +51,11 @@ const BAY_NAMES = Object.freeze({
 
 // Among bays that take the same item, the higher priority is tried first:
 // a hold made for one kind of item before a general one, and cargo last.
-const PRIORITY = Object.freeze({ specialised: 80, kind: 70, general: 60, cargo: 0 });
+const PRIORITY = Object.freeze({ specialised: 80, kind: 70, general: 60, wide: 50, cargo: 0 });
+// Holds that take many kinds of item and so come after every hold made for
+// one kind: the Expedition Hold takes gas, salvage, commodities, probes and
+// more, which the Mining, Salvage and Planetary Commodities Holds should get first.
+const WIDE_FLAGS = new Set([188]);
 
 // ---------------------------------------------------------------------------
 // Game lookups, at each use so a hot reload of a game file reaches here.
@@ -149,7 +153,8 @@ function ensureRegistryHolds() {
     const flag = toInt(definition && definition.flagID);
     if (flag <= 0 || bays.has(flag) || definition.managedBy) continue;
     addBuiltIn({
-      key: String(definition.key || `hold${flag}`), flag, name: BAY_NAMES[flag] || "Hold", priority: PRIORITY.kind,
+      key: String(definition.key || `hold${flag}`), flag, name: BAY_NAMES[flag] || "Hold",
+      priority: WIDE_FLAGS.has(flag) ? PRIORITY.wide : PRIORITY.kind,
       capacity: ({ resourceState, shipTypeID }) =>
         toNumber(registry().getSpecialShipHoldCapacity(resourceState, shipTypeID, flag, baseAttribute), 0),
       accepts: (type) => registry().isSpecialShipHoldItemAllowed(type, flag) === true,
@@ -220,7 +225,11 @@ function addBay(definition, modID = null) {
 }
 
 function removeModBays(modID) {
-  for (const [flag, bay] of [...bays]) if (bay.mod && bay.mod === modID) bays.delete(flag);
+  for (const [flag, bay] of [...bays]) {
+    if (!bay.mod || bay.mod !== modID) continue;
+    bays.delete(flag);
+    emitChanged({ reason: "removeBay", flag });
+  }
 }
 
 // The sum of a dogma attribute over the online fitted modules (in `slots`,
@@ -373,9 +382,10 @@ function route(ship, typeID, options = {}) {
     let takes = false;
     try { takes = bay.accepts(type) === true; } catch (_) { takes = false; }
     if (!takes) continue;
-    if (bay.exclusive) exclusive = true;
     const cap = v.capacity(bay.flag);
     if (!(cap > EPSILON)) continue;
+    // Exclusive only on a ship that has the bay: one without it keeps cargo.
+    if (bay.exclusive) exclusive = true;
     out.push({ flag: bay.flag, key: bay.key, name: bay.name, priority: bay.priority, capacity: cap, used: v.used(bay.flag), free: v.free(bay.flag) });
   }
   out.sort((a, b) => (b.priority - a.priority) || (a.flag - b.flag));
@@ -563,6 +573,101 @@ function giveBack(receipt, quantity, options = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// Bills of materials, for a module that builds or refines from what the ship
+// carries (a field assembler): every type in the bill is looked for in every
+// bay that takes it or holds it, a mod's own bays included, then cargo. Never
+// the drone or fighter bay: those hold what the pilot flies with.
+
+function billOf(bill) {
+  const merged = new Map();
+  for (const line of Array.isArray(bill) ? bill : [bill]) {
+    const typeID = toInt(line && line.typeID);
+    const quantity = Math.max(0, toInt(line && line.quantity));
+    if (typeID > 0 && quantity > 0) merged.set(typeID, (merged.get(typeID) || 0) + quantity);
+  }
+  return [...merged].map(([typeID, quantity]) => ({ typeID, quantity }));
+}
+
+function materialSources(ship, typeID, options) {
+  const flying = new Set([DRONE_BAY_FLAG, FIGHTER_BAY_FLAG]);
+  const all = sources(ship, typeID, options).filter((flag) => !flying.has(flag));
+  // options.from narrows the search to some flags, in its own order.
+  if (!Array.isArray(options.from)) return all;
+  const allowed = new Set(all);
+  return options.from.map((flag) => toInt(flag)).filter((flag) => allowed.has(flag));
+}
+
+// What the ship has of each line in a bill: { complete, lines: [{ typeID,
+// quantity, available, missing, where: [{ flag, quantity }] }], missing:
+// [{ typeID, quantity }], plan: [{ flag, typeID, quantity }], freed: { flag: m3 } }.
+// plan and freed are what takeMaterials would take and the room it would leave,
+// so a caller can check its product fits before taking anything.
+function materials(ship, bill, options = {}) {
+  const v = options.view || view(ship, { ...options, resourceState: options.resourceState || {} });
+  const lines = [];
+  const missing = [];
+  const plan = [];
+  const freed = {};
+  for (const { typeID, quantity } of billOf(bill)) {
+    const where = v ? holdings(ship, typeID, { ...options, view: v, sources: materialSources(ship, typeID, { ...options, view: v }) }) : [];
+    const available = where.reduce((sum, h) => sum + h.quantity, 0);
+    const short = Math.max(0, quantity - available);
+    lines.push({ typeID, quantity, available, missing: short, where });
+    if (short > 0) missing.push({ typeID, quantity: short });
+    let remaining = quantity;
+    for (const h of where) {
+      if (remaining <= 0) break;
+      const n = Math.min(h.quantity, remaining);
+      plan.push({ flag: h.flag, typeID, quantity: n });
+      freed[h.flag] = (freed[h.flag] || 0) + n * unitVolume(typeID);
+      remaining -= n;
+    }
+  }
+  return { complete: missing.length === 0, lines, missing, plan: missing.length ? [] : plan, freed: missing.length ? {} : freed };
+}
+
+// Takes a whole bill or nothing. Returns { success, receipts, missing }; the
+// receipts are plain data a caller may save to disk and hand to
+// giveBackMaterials later (a cancelled job).
+function takeMaterials(ship, bill, options = {}) {
+  const shipItem = shipOf(ship);
+  if (!shipItem) return { success: false, receipts: [], missing: billOf(bill) };
+  const check = materials(shipItem, bill, options);
+  if (!check.complete) return { success: false, receipts: [], missing: check.missing };
+  const receipts = [];
+  // Each take looks at the ship afresh: a view given for the check is stale after the first.
+  const { view: _checked, ...rest } = options;
+  for (const line of check.lines) {
+    const result = take(shipItem, { ...rest, typeID: line.typeID, quantity: line.quantity,
+      sources: line.where.map((h) => h.flag) });
+    if (!result.success) {
+      giveBackMaterials(receipts, options);
+      return { success: false, receipts: [], missing: [{ typeID: line.typeID, quantity: Math.max(0, line.quantity - toInt(result.available)) }] };
+    }
+    receipts.push(result.receipt);
+  }
+  return { success: true, receipts, missing: [] };
+}
+
+// Gives back everything the receipts still hold, to the bays it came from.
+// Returns { given: [{ typeID, quantity }], left: [{ typeID, quantity }] };
+// what is left (a bay since filled up or gone) is the caller's to place, in a
+// can or through grant.
+function giveBackMaterials(receipts, options = {}) {
+  const given = [];
+  const left = [];
+  for (const receipt of Array.isArray(receipts) ? receipts : [receipts]) {
+    if (!receipt || !Array.isArray(receipt.taken)) continue;
+    const owed = receipt.taken.reduce((sum, part) => sum + Math.max(0, toInt(part.quantity)), 0);
+    if (owed <= 0) continue;
+    const n = giveBack(receipt, owed, options);
+    if (n > 0) given.push({ typeID: toInt(receipt.typeID), quantity: n });
+    if (n < owed) left.push({ typeID: toInt(receipt.typeID), quantity: owed - n });
+  }
+  return { given, left };
+}
+
+// ---------------------------------------------------------------------------
 // The holds.changed hook point.
 
 function emitChanged(detail) {
@@ -603,6 +708,9 @@ module.exports = {
   grant,
   take,
   giveBack,
+  materials,
+  takeMaterials,
+  giveBackMaterials,
   syncChanges,
   stackVolume,
   unitVolume,

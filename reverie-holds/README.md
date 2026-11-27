@@ -4,9 +4,16 @@ Holds and Bays adds bay extension modules to EveJS. A bay extension grows one of
 
 The mod is also a framework for other Reverie mods. Their modules can carry a bay (a salvager with its own Salvage Hold), their ships can get a bay, and a mod can add a bay of its own on a new inventory flag. [GUIDE.md](GUIDE.md) shows modders how.
 
-Version 0.1.1. It ports the bay extensions from the Scarlet build into a standalone install. It passes its offline tests against a clean EveJS 261115.1. On 2026-11-26 it was installed through the EveJS Launcher with Reverie Core 0.3.0, Reverie Client Data 0.1.1 and Reverie's Salvage and Reclamation 0.3.0, and passed an 80-step automated test in a running EVE client with no client errors. After every fit, unfit, offline, online, undock, dock and change of ship, the test checks that the inventory window lists exactly the bays the ship's menu offers.
+Version 0.2.0. It ports the bay extensions from the Scarlet build into a standalone install, and it passes its offline tests against a clean EveJS 261115.1. Version 0.1.1 was installed through the EveJS Launcher on 2026-11-26 with Reverie Core 0.3.0, Reverie Client Data 0.1.1 and Reverie's Salvage and Reclamation 0.3.0, and passed an 80-step automated test in a running EVE client with no client errors. After every fit, unfit, offline, online, undock, dock and change of ship, that test checks that the inventory window lists exactly the bays the ship's menu offers.
 
-Version 0.1.1 fixes three things in the inventory window. A bay shows again when you fit its extension a second time, the list of bays updates when you put an extension offline or online, and taking the last bay away from a ship no longer freezes the client.
+Version 0.2.0 makes the mod a sturdier base for other mods to build on:
+
+- Gas and salvage go to the Mining Hold and the Salvage Hold before the Expedition Hold, which takes almost anything and now comes last of the special holds.
+- When a mod makes its bay the only place for an item, ships without that bay still put the item in cargo. Before, the item had nowhere to go on those ships.
+- A mod's own bay that one of its modules gives now shows up and disappears in the inventory window when you fit, unfit, offline or online that module, with no relog.
+- Modders get version 1.1 of the holds service. It adds the route order numbers, an event when a mod's bay goes away, and a way to take a whole list of materials from every bay on the ship at once, so a module that builds from a blueprint can use the minerals in your Mineral Hold or any other bay. A new test mod, covered in [GUIDE.md](GUIDE.md), shows every step of adding a bay of your own.
+
+Version 0.1.1 fixed three things in the inventory window. A bay shows again when you fit its extension a second time, the list of bays updates when you put an extension offline or online, and taking the last bay away from a ship no longer freezes the client.
 
 ## What you get
 
@@ -92,7 +99,7 @@ Before you remove the mod for good, take everything out of the bays its modules 
 | Mod | What it adds |
 |---|---|
 | Reverie's Salvage and Reclamation 0.3.0 or later | Every salvager carries a Salvage Hold of its own (500 m³ on T1 and meta, 750 m³ from T2 up), each Field Reclaimer a Mineral Hold (1,000 m³ T1, 1,500 m³ T2), and Loot All sends salvage to the Salvage Hold. |
-| Field modules (not released yet) | The Ice Centrifuge carries a Fuel Bay and the Field Reprocessor a Mineral Hold. |
+| Field modules (not released yet) | Field Assemblers take their materials from any of your bays as well as cargo, the Ice Centrifuge carries a Fuel Bay and the Field Reprocessor a Mineral Hold. |
 | Data (not released yet) | Data Storage, a bay of its own on every ship, with its drives, chips and extensions. |
 | Ship fuel (not released yet) | A Fuel Bay on every ship, sized by hull. |
 
@@ -114,4 +121,4 @@ It also edits ships (category 6), but only to give hulls the bays other mods ask
 
 ## Testing
 
-`node mods/reverie-holds/test/run.js "<clean EveJS root>"` builds a throwaway install from a clean EveJS, enables the core and the mod with the core's own CLI, runs a probe and a pilot's whole way through the bays, and checks that disabling puts the game file back byte for byte. When Reverie's Salvage and Reclamation sits beside this mod in `mods/`, it joins for a partner test.
+`node mods/reverie-holds/test/run.js "<clean EveJS root>"` builds a throwaway install from a clean EveJS, enables the core and the mod with the core's own CLI, runs a probe and a pilot's whole way through the bays, and checks that disabling puts the game file back byte for byte. When Reverie's Salvage and Reclamation sits beside this mod in `mods/`, it joins for a partner test. Last, it enables the test mod in `test/fixtures/reverie-specimen`, which adds a Specimen Bay of its own, and checks that every part of Holds treats that bay like one of EVE's, including through a live reload of Holds and a live disable of the test mod.

@@ -56,7 +56,10 @@ TREE_WATCH_SECONDS = 1.0
 HELD_CACHE_SECONDS = 10.0
 CAPACITY_CACHE_TICKS = 2000000  # blue wallclock is in 100 ns ticks
 SHIP_CATEGORY_ID = 6
+MODULE_CATEGORY_ID = 7
 CAPSULE_GROUP_ID = 29
+# How often the tree watch asks the server whether a mod's bay is there (it costs a call per bay).
+CUSTOM_WATCH_SECONDS = 3.0
 # Modules that hold CCP's ALL_HOLDS list (the same list, or copies of it).
 ALL_HOLDS_MODULES = ('appConst', 'eve.common.lib.appConst', 'eve.common.script.sys.idCheckers',
                      'inventorycommon.const')
@@ -291,6 +294,10 @@ def is_bay_module_type(type_id):
         if int(type_id) in MODULE_BAY_TYPES:
             return True
         import evetypes
+        # A mod's own bay may be sized by any module it likes (bays.js size.moduleAttribute), and
+        # the client cannot tell which, so with such bays every module counts.
+        if CUSTOM_BAYS and evetypes.GetCategoryID(type_id) == MODULE_CATEGORY_ID:
+            return True
         return EXTENSION_GROUP > 0 and evetypes.GetGroupID(type_id) == EXTENSION_GROUP
     except Exception:
         return False
@@ -343,7 +350,34 @@ def bay_signature():
             return None
         if value > 0 or bay_holds_items(ship_id, attribute_id):
             present.append(attribute_id)
-    return ship_id, tuple(present)
+    return ship_id, tuple(present), custom_bays_present(ship_id)
+
+
+# The mod bays the active ship has, as the server sizes them, asked again every
+# CUSTOM_WATCH_SECONDS: a module that sizes one going offline or online moves no item, so only
+# asking shows it.
+_custom_present = {}
+
+
+def custom_bays_present(ship_id):
+    if not CUSTOM_BAYS:
+        return ()
+    now = time.time()
+    if _custom_present.get('ship') == ship_id and now - _custom_present.get('at', 0) < CUSTOM_WATCH_SECONDS:
+        return _custom_present.get('present', ())
+    present = ()
+    try:
+        location = builtin('sm').GetService('clientDogmaIM').GetDogmaLocation()
+        if location.IsItemLoaded(ship_id):
+            type_id = location.GetDogmaItem(ship_id).typeID
+            _capacity_cache.clear()
+            present = tuple(int(bay['flag']) for bay in CUSTOM_BAYS
+                            if custom_bay_registered(bay) and custom_bay_on(bay, ship_id, type_id))
+    except Exception:
+        log_once('custom_bays_present', 'custom_bays_present')
+        return _custom_present.get('present', ()) if _custom_present.get('ship') == ship_id else ()
+    _custom_present.update(ship=ship_id, at=now, present=present)
+    return present
 
 
 def inventory_windows():

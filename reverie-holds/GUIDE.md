@@ -7,7 +7,7 @@ This guide is for modders who want their Reverie mod to work with bays. It shows
 - add a bay of your own on a new inventory flag, the way the data mod adds Data Storage;
 - put items into a ship and take them out from your scripts, so they always land in the right bay.
 
-Holds and Bays version 0.1.1 needs Reverie Core 0.3.0 or later. Everything here is in the mod's own code, and the file each part lives in is named.
+Holds and Bays version 0.2.0 (holds service 1.1.0) needs Reverie Core 0.3.0 or later. Everything here is in the mod's own code, and the file each part lives in is named.
 
 ## The one rule
 
@@ -146,8 +146,8 @@ api.when("holds", "1", (holds) => {
 | `accepts.categories`, `accepts.groups`, `accepts.types` | what the bay takes | nothing |
 | `accepts.test(type)` | a function for any other rule (or pass a function as `accepts`) | none |
 | `refusal` | the text a pilot sees when the bay refuses an item | "That item cannot be placed in the ..." |
-| `exclusive` | the bay's items go nowhere else in the ship: `route` never falls back to cargo for them | false |
-| `priority` | among bays that take the same item, the higher one is tried first. Specialised holds are 80, kind holds 70, the Mining Hold 60, cargo 0. | 70 |
+| `exclusive` | on a ship that has the bay, its items go nowhere else: `route` never falls back to cargo for them. A ship without the bay still puts them in cargo | false |
+| `priority` | among bays that take the same item, the higher one is tried first. Specialised holds (gas, ice, asteroid) are 80, kind holds (salvage, ammo, mineral, planetary, fuel) 70, the Mining Hold 60, the Expedition Hold 50, cargo 0. A tie goes to the lower flag. `service.priorities` has these numbers. | 70 |
 | `routable` | false keeps the bay out of `route`, so items only arrive by hand | true |
 
 The size is the sum of the three `size` parts plus any ship bay contributed for the bay's `key`. With the bay defined, the inventory window's move check and capacity both use it. The pilot is refused when the bay does not take an item or has no room, and the guards in "The one rule" apply.
@@ -220,11 +220,35 @@ if (out.left.length) {
 }
 ```
 
+### Bills of materials
+
+A module that builds from a blueprint, like a field assembler, needs a whole list of materials at once. Service 1.1 has three calls for that. They look for every type in every bay that takes it or holds it, your own bays and other mods' bays included, and then in cargo, so a pilot with a Mineral Hold can keep their minerals there. They never take from the drone bay or the fighter bay, because those hold what the pilot flies with.
+
+| Call | What it does |
+|---|---|
+| `materials(ship, bill, options)` | checks a bill `[{ typeID, quantity }]` (repeated types are added up) without taking anything. Returns `{ complete, lines: [{ typeID, quantity, available, missing, where: [{ flag, quantity }] }], missing: [{ typeID, quantity }], plan, freed }`. `plan` lists what `takeMaterials` would take from each flag, and `freed` is the m³ that would leave each flag, so you can check that your product will fit before you take anything. |
+| `takeMaterials(ship, bill, options)` | takes the whole bill, or nothing if any line is short. Returns `{ success, receipts, missing }`. The receipts are plain data, so you can save them with your job. |
+| `giveBackMaterials(receipts, options)` | returns everything the receipts still hold to the bays it came from, for a job that is cancelled. Returns `{ given, left }`. Whatever is left (its bay has filled up or gone since) is yours to place with `grant` or a can. |
+
+`options.from`, a list of flags, limits the search to those flags in that order, for a module that may only use its own bay.
+
+```js
+const bill = industry.buildManufacturingMaterials(blueprint, 1, materialEfficiency);
+const check = holds.materials(ship, bill, { characterID });
+if (!check.complete) return stop(`missing ${describe(check.missing)}`);
+const taken = holds.takeMaterials(ship, bill, { characterID });
+if (!taken.success) return stop(`missing ${describe(taken.missing)}`);
+job.receipts = taken.receipts;                                  // saved with the job
+// ...and if the pilot cancels the job:
+const back = holds.giveBackMaterials(job.receipts, { characterID });
+if (back.left.length) holds.grant(ship, back.left, { characterID });
+```
+
 ## 7. Hooks
 
 | Hook | Kind | When |
 |---|---|---|
-| `holds.changed` | emit | a ship's bays change: `{ reason: "addBay", flag }`, or `{ reason: "grant" \| "take" \| "giveBack", shipID, purpose? }` |
+| `holds.changed` | emit | a ship's bays change: `{ reason: "addBay" \| "removeBay", flag }` (removeBay from service 1.1), or `{ reason: "grant" \| "take" \| "giveBack", shipID, purpose? }` |
 | `holds.deliveryStacks` | run | an agent counts a delivery. Holds answers with the stacks in every bay that takes the type, so ore in the Mining Hold counts. The hook point is the text edit in `agentMissionRuntime.js`. |
 
 Listen with `api.hooks.on(name, fn)`.
@@ -240,6 +264,10 @@ Give your own bay its own settings in your mod's manifest, in the same way. A se
 Holds' offline harness (`test/run.js`) shows how to test a mod against a clean EveJS: it builds a throwaway install, enables the core and the mod with the core's CLI, runs scripts inside the game's own code with the type layer on, and checks that disabling restores the game files.
 
 `test/partners.js` is the worked example of a partner. It runs with Reverie's Salvage and Reclamation enabled beside Holds and checks that a Salvager I gives a Rifter a 500 m³ Salvage Hold, that the hold takes salvage and refuses ore, and that Loot All sends salvage there. `test/workflow.js` adds a bay of its own on flag 199 and checks its size, the window's capacity, the refusal and the route.
+
+`test/fixtures/reverie-specimen` is a whole mod of the kind this guide describes, and the best one to copy. Its manifest is named `evejs-launcher.mod.json.fixture` so the launcher never takes it for a second mod inside Holds' package; rename it to `evejs-launcher.mod.json` in your copy. Its layer adds a module and a dogma attribute and hands Holds a client bay on flag 200, a hull size for the Rifter and an Ammo Hold on its second module, along with three wrong entries that Holds skips. Its server side adds the Specimen Bay through `api.when("holds", "1.1", ...)`, sized by the hull and by every online Specimen Locker in a low slot, and listens on `holds.changed`. `test/framework.js` runs with it enabled and checks the bay's size, the window, moves and refusals, routes and `exclusive`, placing and pulling, the unfit, offline and undock guards, deliveries, Loot All, a bill of materials split over the Specimen Bay, a Mineral Hold and cargo, the events, a live reload of Holds and the bay going away when the mod is disabled.
+
+On the client, the inventory tree checks a mod's bays every three seconds while an Inventory window is open, and at once when any module goes onto or comes off the active ship, so a bay sized by your own module appears and goes without a relog.
 
 Things to check for your own bay:
 

@@ -1,0 +1,16 @@
+{
+  "reverieVersion": 1,
+  "id": "reverie-specimen",
+  "processes": ["game"],
+  "claims": {
+    "types": [[994700, 994709]],
+    "attributes": [7960],
+    "messages": [[9796000, 9796099]]
+  },
+  "client": {
+    "layer": "defs/layer.js"
+  },
+  "worksWith": [
+    { "mod": "reverie-holds", "service": "holds", "version": "1.1", "adds": "A Specimen Bay on the Rifter, which a Specimen Locker enlarges." }
+  ]
+}

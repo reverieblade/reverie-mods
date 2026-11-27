@@ -300,12 +300,15 @@ function patchLoot(api) {
 
 function provideService(api) {
   const bays = () => lib("bays");
-  api.provide("holds", "1.0.0", {
+  // 1.1.0: priorities, the holds.changed "removeBay" reason, bills of materials.
+  api.provide("holds", "1.1.0", {
     // The bay table.
     bays: () => bays().list().map(({ key, flag, name, priority, routable, exclusive, builtIn, mod }) =>
       ({ key, flag, name, priority, routable, exclusive, builtIn, mod })),
     bay: (flag) => bays().bayOf(flag),
     bayName: (flag) => bays().bayName(flag),
+    // The route order numbers (GUIDE.md, addBay's priority).
+    priorities: lib("bays").PRIORITY,
     // A bay of a mod's own: { key, flag, name, size, accepts, refusal,
     // exclusive, priority, routable }. definition.mod names the mod.
     addBay: (definition) => bays().addBay(definition, definition && definition.mod ? String(definition.mod) : null),
@@ -322,6 +325,12 @@ function provideService(api) {
     grant: (ship, entries, options) => bays().grant(ship, entries, options),
     take: (ship, request) => bays().take(ship, request),
     giveBack: (receipt, quantity, options) => bays().giveBack(receipt, quantity, options),
+    // A bill of materials across every bay and cargo, for a module that builds
+    // from what the ship carries (a field assembler): check, take all or
+    // nothing, give back.
+    materials: (ship, bill, options) => bays().materials(ship, bill, options),
+    takeMaterials: (ship, bill, options) => bays().takeMaterials(ship, bill, options),
+    giveBackMaterials: (receipts, options) => bays().giveBackMaterials(receipts, options),
     // The guards.
     overflowWithoutItems: (snapshot, itemIDs, addedByFlag) => lib("bayOverflow").overflowWithoutItems(snapshot, itemIDs, addedByFlag),
     overfullBays: (characterID, shipItem) => lib("bayOverflow").overfullBays(characterID, shipItem),

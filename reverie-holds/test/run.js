@@ -141,6 +141,26 @@ if (withSalvage) {
   console.log("--    partner test skipped: reverie-salvage is not beside this mod");
 }
 
+check("a modder's own mod adds a bay through the service and the layer, and the rest of Holds uses it (framework.js)", () => {
+  // The test mod's manifest ships as .fixture, so the launcher never counts a second mod in
+  // Holds' package; it gets its real name in the test install.
+  const specimen = path.join(root, "mods", "reverie-specimen");
+  fs.cpSync(path.join(MOD, "test", "fixtures", "reverie-specimen"), specimen, { recursive: true });
+  fs.renameSync(path.join(specimen, "evejs-launcher.mod.json.fixture"), path.join(specimen, "evejs-launcher.mod.json"));
+  const out = cli("enable", "reverie-specimen");
+  assert.strictEqual(out.status, 0, out.stdout + out.stderr);
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 4000);
+  runInGame("composeLayer.js");
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 4000);
+  try {
+    // framework.js disables the test mod itself, live, as its last check.
+    runInGame("framework.js", { REVERIE_TYPE_LAYER: "server" });
+  } finally {
+    const loader = path.join(root, "mods", "reverie-specimen", "loader.js");
+    if (fs.existsSync(loader)) fs.renameSync(loader, `${loader}.disabled`);
+  }
+});
+
 check("disable puts the game files back byte for byte", () => {
   const out = cli("disable", "reverie-holds");
   assert.strictEqual(out.status, 0, out.stdout + out.stderr);
