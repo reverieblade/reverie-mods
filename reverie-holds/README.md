@@ -4,7 +4,7 @@ Holds and Bays adds bay extension modules to EveJS. A bay extension grows one of
 
 The mod is also a framework for other Reverie mods. Their modules can carry a bay (a salvager with its own Salvage Hold), their ships can get a bay, and a mod can add a bay of its own on a new inventory flag. [GUIDE.md](GUIDE.md) shows modders how.
 
-Version 0.2.0. It ports the bay extensions from the Scarlet build into a standalone install, and it passes its offline tests against a clean EveJS 261115.1. Version 0.1.1 was installed through the EveJS Launcher on 2026-11-26 with Reverie Core 0.3.0, Reverie Client Data 0.1.1 and Reverie's Salvage and Reclamation 0.3.0, and passed an 80-step automated test in a running EVE client with no client errors. After every fit, unfit, offline, online, undock, dock and change of ship, that test checks that the inventory window lists exactly the bays the ship's menu offers.
+Version 0.2.0. It ports the bay extensions from the Scarlet build into a standalone install, and it passes its offline tests against a clean EveJS 261115.1. On 2026-11-26 it was installed through the EveJS Launcher over 0.1.1, with Reverie Core 0.3.0, Reverie Client Data 0.1.1 and Reverie's Salvage and Reclamation 0.3.0, and passed an 80-step automated test in a running EVE client with no client errors. After every fit, unfit, offline, online, undock, dock and change of ship, that test checks that the inventory window lists exactly the bays the ship's menu offers.
 
 Version 0.2.0 makes the mod a sturdier base for other mods to build on:
 
